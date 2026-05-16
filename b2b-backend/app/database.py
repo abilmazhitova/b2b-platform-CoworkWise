@@ -6,7 +6,7 @@ DATABASE_URL = f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASS}@{set
 
 engine = create_async_engine(
     DATABASE_URL,
-    connect_args={"ssl": False},  # без SSL — часто нужно для Docker на Windows
+    connect_args={"ssl": False}, 
     pool_pre_ping=True,
     pool_recycle=300,
 )

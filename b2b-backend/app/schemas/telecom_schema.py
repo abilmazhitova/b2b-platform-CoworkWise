@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 
-# ---------- TelecomGrid ----------
+
 class TelecomGridBase(BaseModel):
     zid_number: int
     lat_bot_left: float
@@ -26,7 +26,7 @@ class GridWithActivity(TelecomGridRead):
     activity: float = 0.0
 
 
-# ---------- TelecomStat ----------
+
 class TelecomStatBase(BaseModel):
     grid_id: int
     week_day: int = Field(ge=0, le=6, description="0=Mon ... 6=Sun")

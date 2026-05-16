@@ -4,7 +4,7 @@ from app.models.telecom import TelecomGrid, TelecomStat
 from app.schemas.telecom_schema import TelecomGridCreate, TelecomStatCreate
 import pandas as pd
 
-# ---------- TELECOM GRID ----------
+
 async def create_grid(session: AsyncSession, data: TelecomGridCreate) -> TelecomGrid:
     grid = TelecomGrid(**data.dict())
     session.add(grid)
@@ -24,7 +24,7 @@ async def get_grids_with_activity(
     time_hour_from: int | None = None,
     time_hour_to: int | None = None,
 ):
-    """Сетки с суммой user_count по статистике. Фильтр по дню/часу — в join, чтобы все сетки оставались в выборке."""
+  
     join_conds = [TelecomGrid.id == TelecomStat.grid_id]
     if week_day is not None:
         join_conds.append(TelecomStat.week_day == week_day)
@@ -45,7 +45,7 @@ async def get_grids_with_activity(
     return result.all()
 
 
-# ---------- TELECOM STAT ----------
+
 async def create_stat(session: AsyncSession, data: TelecomStatCreate) -> TelecomStat:
     stat = TelecomStat(**data.dict())
     session.add(stat)

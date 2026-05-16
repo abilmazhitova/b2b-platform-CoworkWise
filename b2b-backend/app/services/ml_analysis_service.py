@@ -1,13 +1,10 @@
-"""
-ML-аналитика: рекомендации и describe_point на основе геоданных (районы + инфра).
-Данные из БД (сетки + активность) + статические файлы data/districts.geojson, data/infra_points.csv.
-"""
+
 import logging
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Опциональные зависимости — при отсутствии файлов работаем без гео
+
 try:
     import numpy as np
     import pandas as pd
@@ -16,10 +13,9 @@ try:
     from sklearn.preprocessing import MinMaxScaler
     _GEO_AVAILABLE = True
 except ImportError:
-    np = None  # type: ignore
+    np = None 
     _GEO_AVAILABLE = False
 
-# Папка data: сначала b2b-backend/data, затем родительская data (если запуск из корня репо)
 _base = Path(__file__).resolve().parent.parent
 _DATA_DIR = _base / "data"
 if not (_DATA_DIR / "districts.geojson").exists() and not (_DATA_DIR / "infra_points.csv").exists():
@@ -28,8 +24,7 @@ if not (_DATA_DIR / "districts.geojson").exists() and not (_DATA_DIR / "infra_po
         _DATA_DIR = _alt
 _CACHE = {"districts": None, "infra": None, "_loaded": False}
 
-# Median commercial rent tg/m²/month by district (Krisha.kz, 2026-05)
-# Keys match the `name` field in districts.geojson
+
 _RENT_INDEX: dict[str, float] = {
     "Almaly":    9000,
     "Auezov":    7500,
@@ -44,7 +39,7 @@ _RENT_MIN = min(_RENT_INDEX.values())
 _RENT_MAX = max(_RENT_INDEX.values())
 _RENT_AVG = sum(_RENT_INDEX.values()) / len(_RENT_INDEX)
 
-# Соответствие значения фильтра UI → поле name в districts.geojson
+
 DISTRICT_SLUG_TO_GEOJSON_NAME = {
     "almaly": "Almaly",
     "auezov": "Auezov",
@@ -58,16 +53,13 @@ DISTRICT_SLUG_TO_GEOJSON_NAME = {
 
 
 def _growth_from_score(score: int) -> str:
-    """Псевдо-рост относительно скоринга зоны (до данных по аренде/арендаторам)."""
+
     n = max(0, min(30, int(round((score - 45) * 0.6))))
     return f"+{n}%" if n else "+0%"
 
 
 def filter_grids_by_district(rows, district_slug: str | None):
-    """
-    Оставляет сетки, центр которых попадает в полигон района (districts.geojson).
-    rows: список (TelecomGrid, activity).
-    """
+
     if not rows or not district_slug or str(district_slug).lower() in ("all", ""):
         return rows
     target = DISTRICT_SLUG_TO_GEOJSON_NAME.get(str(district_slug).lower().strip())
@@ -108,9 +100,7 @@ def filter_grids_by_district(rows, district_slug: str | None):
 
 
 def get_district_feature_geojson(slug: str):
-    """
-    Один район как GeoJSON Feature (geometry в WGS84) для отрисовки границ на карте.
-    """
+
     if not slug or not _GEO_AVAILABLE:
         return None
     target = DISTRICT_SLUG_TO_GEOJSON_NAME.get(str(slug).lower().strip())
@@ -140,7 +130,7 @@ def get_district_feature_geojson(slug: str):
 
 
 def _load_geo():
-    """Загружает districts.geojson и infra_points.csv (один раз, кэш). Возвращает (gdf_districts, gdf_infra) в EPSG:3857 или (None, None)."""
+
     if not _GEO_AVAILABLE:
         return None, None
     if _CACHE["_loaded"]:
@@ -177,7 +167,7 @@ def _load_geo():
 
 
 def _describe_advantages(density_scaled, infra_scaled, access_scaled, competition_scaled, rent_scaled=None):
-    """Текстовые преимущества по нормализованным метрикам (0–1)."""
+
     reasons = []
     if density_scaled > 0.6:
         reasons.append("High people density")
@@ -206,16 +196,12 @@ def _describe_advantages(density_scaled, infra_scaled, access_scaled, competitio
 
 
 def get_recommendations_ml(rows, limit=10):
-    """
-    Строит рекомендации по сеткам с учётом активности и (при наличии) инфры и районов.
-    rows: список кортежей (TelecomGrid, activity: float).
-    Возвращает список dict для RecommendationItem.
-    """
+
     if not rows:
         return []
     gdf_districts, gdf_infra = _load_geo()
 
-    # Сетки как точки (центр ячейки) + активность как density
+
     records = []
     for g, activity in rows:
         lat = (g.lat_bot_left + g.lat_top_right) / 2
@@ -270,9 +256,9 @@ def get_recommendations_ml(rows, limit=10):
         gdf_join = gdf_feat.copy()
         gdf_join["district"] = "—"
 
-    # Добавляем арендную ставку по району (tg/m²)
+   
     gdf_join["rent_m2"] = gdf_join["district"].map(_RENT_INDEX).fillna(_RENT_AVG)
-    # Нормализуем rent по глобальному диапазону всех районов
+
     gdf_join["rent_m2_scaled"] = (gdf_join["rent_m2"] - _RENT_MIN) / (_RENT_MAX - _RENT_MIN + 1e-9)
 
     scaler = MinMaxScaler()
@@ -280,7 +266,6 @@ def get_recommendations_ml(rows, limit=10):
         vals = gdf_join[[col]].values.astype(float)
         gdf_join[col + "_scaled"] = scaler.fit_transform(vals)
 
-    # Аренда вычитается: дорогой район штрафуется
     gdf_join["potential_score"] = (
         0.30 * gdf_join["avg_density_scaled"]
         + 0.23 * gdf_join["infra_score_scaled"]
@@ -348,10 +333,7 @@ def _forecast_recommendation_text(category: str) -> str:
 
 
 def get_forecast_districts_ml(rows):
-    """
-    Прогноз по районам как в forecast_model.py: активность из БД + инфра + конкуренция.
-    rows: список (TelecomGrid, activity).
-    """
+
     if not rows or not _GEO_AVAILABLE:
         return []
     gdf_districts, gdf_infra = _load_geo()
@@ -446,7 +428,7 @@ def get_forecast_districts_ml(rows):
 
 
 def _fallback_recommendations(rows, limit):
-    """Рекомендации только по активности (без гео)."""
+
     sorted_rows = sorted(rows, key=lambda x: float(x[1]), reverse=True)[:limit]
     if not sorted_rows:
         return []
@@ -483,10 +465,7 @@ def _fallback_recommendations(rows, limit):
 
 
 def describe_point_ml(lat: float, lon: float, radius_m: int, rows):
-    """
-    Подробная аналитика по точке (район, плотность по ближайшей сетке, инфра и конкуренция в радиусе).
-    rows: список (TelecomGrid, activity) для построения плотности по сеткам.
-    """
+
     gdf_districts, gdf_infra = _load_geo()
     result = {
         "location": {"lat": lat, "lon": lon},

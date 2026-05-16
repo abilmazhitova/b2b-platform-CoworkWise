@@ -1,6 +1,4 @@
-"""
-Аналитика на основе данных из БД (grids + stats) и ML (районы + инфра из data/).
-"""
+
 import asyncio
 from fastapi import APIRouter, Query
 from app.database import async_session_maker
@@ -25,7 +23,7 @@ async def get_compare(
     time_hour_to: int | None = Query(None, ge=0, le=23),
     limit: int = Query(10, ge=1, le=50),
 ):
-    """Топ зон по ML-скору (район + инфра + активность), с реальными метриками конкуренции."""
+   
     async with async_session_maker() as session:
         rows = await get_grids_with_activity(
             session, week_day=week_day, time_hour_from=time_hour_from, time_hour_to=time_hour_to
@@ -63,7 +61,7 @@ async def get_recommendations(
     time_hour_to: int | None = Query(None, ge=0, le=23),
     limit: int = Query(10, ge=1, le=50),
 ):
-    """Топ рекомендаций: ML-скор (активность + инфра + районы при наличии data/), иначе по активности."""
+   
     async with async_session_maker() as session:
         rows = await get_grids_with_activity(
             session, week_day=week_day, time_hour_from=time_hour_from, time_hour_to=time_hour_to
@@ -79,7 +77,7 @@ async def get_recommendations(
 
 @router.get("/forecast", response_model=ForecastResponse)
 async def get_forecast():
-    """Тренд по месяцам из БД + ML-прогноз по районам (активность сеток + districts + infra)."""
+   
     async with async_session_maker() as session:
         by_month = await get_activity_by_month(session)
         rows = await get_grids_with_activity(session)

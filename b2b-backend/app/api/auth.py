@@ -8,7 +8,7 @@ from app.schemas.user_schema import UserCreate, UserLogin, LoginResponse, UserRe
 from app.core.security import hash_password, verify_password, create_access_token, decode_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-# HTTPBearer: в Swagger /docs в Authorize можно вставить токен в одно поле
+
 security = HTTPBearer(auto_error=False)
 
 
@@ -34,7 +34,7 @@ async def get_current_admin_user(current_user: User = Depends(get_current_user))
     return current_user
 
 
-# регистрация
+
 @router.post("/register", status_code=201)
 async def register(user_data: UserCreate):
     async with async_session_maker() as session:
@@ -52,7 +52,7 @@ async def register(user_data: UserCreate):
         return {"message": "User created successfully"}
 
 
-# вход
+
 @router.post("/login", response_model=LoginResponse)
 async def login(user_data: UserLogin):
     async with async_session_maker() as session:
@@ -66,13 +66,13 @@ async def login(user_data: UserLogin):
         return LoginResponse(access_token=token, user=UserRead.model_validate(user))
 
 
-# текущий пользователь (для восстановления сессии на фронте)
+
 @router.get("/me", response_model=UserRead)
 async def me(current_user: User = Depends(get_current_user)):
     return UserRead.model_validate(current_user)
 
 
-# обновить профиль (имя, email)
+
 @router.patch("/me", response_model=UserRead)
 async def update_me(body: UserUpdateProfile, current_user: User = Depends(get_current_user)):
     async with async_session_maker() as session:
@@ -92,7 +92,7 @@ async def update_me(body: UserUpdateProfile, current_user: User = Depends(get_cu
         return UserRead.model_validate(user)
 
 
-# смена пароля
+
 @router.post("/change-password")
 async def change_password(body: ChangePassword, current_user: User = Depends(get_current_user)):
     async with async_session_maker() as session:

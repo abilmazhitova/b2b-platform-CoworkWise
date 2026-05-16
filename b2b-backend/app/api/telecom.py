@@ -18,7 +18,7 @@ from app.services.telecom_service import import_telecom_data
 router = APIRouter(prefix="/telecom", tags=["Telecom"])
 
 
-# ---------- GRIDS ----------
+
 @router.post("/grids", response_model=TelecomGridRead)
 async def add_grid(data: TelecomGridCreate):
     async with async_session_maker() as session:
@@ -43,7 +43,7 @@ async def list_grids_with_activity(
         description="Фильтр по району: almaly, bostandyk, medeu, … или all",
     ),
 ):
-    """Сетки с агрегированной активностью (сумма user_count). Опционально день/час и район (GeoJSON)."""
+
     async with async_session_maker() as session:
         rows = await get_grids_with_activity(session, week_day=week_day, time_hour_from=time_hour_from, time_hour_to=time_hour_to)
         if district and district.lower() not in ("all", ""):

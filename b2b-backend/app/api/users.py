@@ -12,7 +12,6 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.post("", status_code=201, response_model=UserRead)
 async def create_user(body: UserCreate, _: User = Depends(get_current_admin_user)):
-    """Админ создаёт нового пользователя (обычный юзер, не админ)."""
     async with async_session_maker() as session:
         user = User(
             email=body.email,
@@ -59,7 +58,7 @@ async def set_user_admin(
 
 @router.delete("/{user_id}", status_code=204)
 async def delete_user(user_id: int, current_admin: User = Depends(get_current_admin_user)):
-    """Удалить пользователя. Нельзя удалить себя."""
+
     if user_id == current_admin.id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
     async with async_session_maker() as session:
