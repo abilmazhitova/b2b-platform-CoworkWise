@@ -1,0 +1,61 @@
+# Полный стек: PostgreSQL в Docker + FastAPI + Next.js
+#   docker compose up --build
+#
+# Если нужны те же данные, что в локальной БД на ПК (без потери при переходе на Docker):
+#   docker compose -f docker-compose.host-db.yml up --build
+#
+# Фронт ходит в API с браузера на http://localhost:8000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+      POSTGRES_DB: ${DB_NAME:-coworkwise_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-coworkwise_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./b2b-backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Имя хоста = сервис postgres внутри compose. Меняйте значения через .env рядом с этим файлом.
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASS: ${DB_PASS:-postgres}
+      DB_NAME: ${DB_NAME:-coworkwise_db}
+      SECRET_KEY: ${SECRET_KEY:-docker-dev-secret-replace-in-production-min-32-chars}
+      ALGORITHM: HS256
+      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./b2b-backend/data:/app/data
+
+  # После правок в b2b-frontend нужна пересборка: docker compose up --build
+  frontend:
+    build:
+      context: ./b2b-frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

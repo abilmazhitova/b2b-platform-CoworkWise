@@ -1,0 +1,50 @@
+[
+  {
+    "id": "osm-alfayiz-12015470464",
+    "name": "ALFAYIZ",
+    "lat": 43.256344,
+    "lng": 76.946234
+  },
+  {
+    "id": "osm-city-hub-9798776154",
+    "name": "City Hub",
+    "lat": 43.255197,
+    "lng": 76.946088
+  },
+  {
+    "id": "osm-coworking-6-12015452074",
+    "name": "Coworking #6",
+    "lat": 43.255876,
+    "lng": 76.943534
+  },
+  {
+    "id": "osm-eurasia36-kz-10311472904",
+    "name": "EURASIA36.KZ",
+    "lat": 43.242972,
+    "lng": 76.918323
+  },
+  {
+    "id": "osm-fifty-four-9796594630",
+    "name": "Fifty four",
+    "lat": 43.266454,
+    "lng": 76.93574
+  },
+  {
+    "id": "osm-promenade-business-park-1458064098",
+    "name": "Promenade Business Park",
+    "lat": 43.240189,
+    "lng": 76.925165
+  },
+  {
+    "id": "osm-sail-10100103725",
+    "name": "Sail",
+    "lat": 43.238044,
+    "lng": 76.896417
+  },
+  {
+    "id": "osm-smart-point-5689209440",
+    "name": "SmArt.Point",
+    "lat": 43.236823,
+    "lng": 76.915174
+  }
+]

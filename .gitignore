@@ -1,0 +1,34 @@
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Node
+**/node_modules/
+**/.next/
+
+# Env files (secrets)
+**/.env
+**/.env.local
+**/.env.production
+
+# IDE
+**/.idea/
+**/.vscode/
+
+# Raw telecom data (large xlsx files — load via Admin panel)
+b2b-ml_analysis/ml/data/*.xlsx
+b2b-ml_analysis/ml/data/*.csv
+b2b-ml_analysis/ml/data/cache/
+
+# ML outputs (generated, not source)
+b2b-ml_analysis/ml/outputs/
+
+# Uploads folder (runtime)
+b2b-backend/uploads/
+
+# OS
+.DS_Store
+Thumbs.db

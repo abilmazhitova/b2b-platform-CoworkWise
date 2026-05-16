@@ -1,0 +1,39 @@
+# Режим разработки: API и фронт в Docker, PostgreSQL на вашем ПК (данные как у локального npm/uvicorn).
+# Запуск: docker compose -f docker-compose.host-db.yml up --build
+#
+# Перед запуском:
+# - поднимите Postgres на хосте (как в b2b-backend/.env: обычно 127.0.0.1:5432);
+# - совпадают DB_USER / DB_PASS / DB_NAME с корневым .env или значениями ниже;
+# - не занимайте порт 8000 и 3000 контейнерами из полного compose.
+
+services:
+  backend:
+    build:
+      context: ./b2b-backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASS: ${DB_PASS:-postgres}
+      DB_NAME: ${DB_NAME:-coworkwise_db}
+      SECRET_KEY: ${SECRET_KEY:-docker-dev-secret-replace-in-production-min-32-chars}
+      ALGORITHM: HS256
+      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./b2b-backend/data:/app/data
+
+  frontend:
+    build:
+      context: ./b2b-frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend

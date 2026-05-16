@@ -1,0 +1,12 @@
+{
+  "_comment": "Median commercial rent tg/m2/month by district. Source: krisha.kz scrape 2026-05.",
+  "_keys": "Match GeoJSON district name field",
+  "Almaly":    { "median_rent_m2": 9000,  "count": 90 },
+  "Auezov":    { "median_rent_m2": 7500,  "count": 31 },
+  "Bostandyq": { "median_rent_m2": 12100, "count": 101 },
+  "Medeu":     { "median_rent_m2": 12000, "count": 147 },
+  "Turksib":   { "median_rent_m2": 5000,  "count": 23 },
+  "Zhetysu":   { "median_rent_m2": 6667,  "count": 27 },
+  "Alatau":    { "median_rent_m2": 6000,  "count": 17 },
+  "Nauryzbay": { "median_rent_m2": 4615,  "count": 19 }
+}
