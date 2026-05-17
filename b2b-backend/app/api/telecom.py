@@ -8,7 +8,7 @@ from app.schemas.telecom_schema import (
     TelecomStatCreate, TelecomStatRead,
 )
 from app.services.telecom_service import (
-    create_grid, get_grids, get_grids_with_activity,
+    create_grid, get_grids, get_grids_with_activity, get_grids_with_activity_in_district,
     create_stat, get_stats_by_grid,
 )
 from fastapi import File, UploadFile
@@ -43,14 +43,35 @@ async def list_grids_with_activity(
         description="Фильтр по району: almaly, bostandyk, medeu, … или all",
     ),
 ):
+    use_district = district and district.lower() not in ("all", "")
 
     async with async_session_maker() as session:
-        rows = await get_grids_with_activity(session, week_day=week_day, time_hour_from=time_hour_from, time_hour_to=time_hour_to)
-        if district and district.lower() not in ("all", ""):
-            loop = asyncio.get_event_loop()
-            rows = await loop.run_in_executor(
-                None, lambda: ml_analysis_service.filter_grids_by_district(rows, district)
+        if use_district:
+            geojson = ml_analysis_service.get_district_geometry_geojson_str(district)
+            if not geojson:
+                return []
+            rows = await get_grids_with_activity_in_district(
+                session, geojson,
+                week_day=week_day, time_hour_from=time_hour_from, time_hour_to=time_hour_to,
             )
+            return [
+                GridWithActivity(
+                    id=r["id"],
+                    zid_number=r["zid_number"],
+                    lat_bot_left=r["lat_bot_left"],
+                    long_bot_left=r["long_bot_left"],
+                    lat_bot_right=r["lat_bot_right"],
+                    long_bot_right=r["long_bot_right"],
+                    lat_top_right=r["lat_top_right"],
+                    long_top_right=r["long_top_right"],
+                    activity=float(r["activity"]),
+                )
+                for r in rows
+            ]
+
+        rows = await get_grids_with_activity(
+            session, week_day=week_day, time_hour_from=time_hour_from, time_hour_to=time_hour_to,
+        )
         return [
             GridWithActivity(
                 id=g.id,

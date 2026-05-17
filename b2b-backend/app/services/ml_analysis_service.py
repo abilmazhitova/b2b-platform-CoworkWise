@@ -129,6 +129,15 @@ def get_district_feature_geojson(slug: str):
         return None
 
 
+def get_district_geometry_geojson_str(slug: str) -> str | None:
+    """Return district geometry as GeoJSON string for use in PostGIS ST_GeomFromGeoJSON."""
+    feature = get_district_feature_geojson(slug)
+    if feature is None:
+        return None
+    import json
+    return json.dumps(feature["geometry"])
+
+
 def _load_geo():
 
     if not _GEO_AVAILABLE:
