@@ -23,6 +23,8 @@ interface CompareItem {
     avgRent?: number
     district?: string
     zone_id?: string
+    cluster_label?: string
+    ml_score?: number
 }
 
 function timeOfDayToParams(timeOfDay: string): { time_hour_from?: number; time_hour_to?: number } {
@@ -95,6 +97,33 @@ export function CompareView() {
     const [scope, setScope] = useState<"saved" | "model" | "session">("model")
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [sessionClusters, setSessionClusters] = useState<Record<string, { cluster_label: string; ml_score: number }>>({})
+
+    useEffect(() => {
+        if (scope !== "session" || sessionComparePoints.length === 0) {
+            setSessionClusters({})
+            return
+        }
+        const zones = sessionComparePoints.map((p, i) => ({
+            id: i + 1,
+            lat: p.lat,
+            lon: p.lng,
+            density: p.density ?? 0,
+            competition: p.competition ?? 0,
+            district: p.district || "",
+        }))
+        api.post<Array<{ id: number; cluster_label: string; score: number }>>(
+            "/analysis/cluster_zones",
+            { zones }
+        ).then(({ data }) => {
+            const map: Record<string, { cluster_label: string; ml_score: number }> = {}
+            data.forEach((c, i) => {
+                const pointId = sessionComparePoints[i]?.id
+                if (pointId) map[pointId] = { cluster_label: c.cluster_label, ml_score: c.score }
+            })
+            setSessionClusters(map)
+        }).catch(() => {})
+    }, [scope, sessionComparePoints])
 
     useEffect(() => {
         let cancelled = false
@@ -134,7 +163,7 @@ export function CompareView() {
 
     const rankedModel = [...comparisonData]
         .map((x, i) => ({ ...x, id: x.zone_id ? String(x.zone_id) : `model-${i}`, decisionScore: decisionScore(x) }))
-        .sort((a, b) => b.decisionScore - a.decisionScore)
+        .sort((a, b) => (b.ml_score ?? b.decisionScore) - (a.ml_score ?? a.decisionScore))
 
     const rankedSaved = [...savedPlaces]
         .map((p) => {
@@ -142,7 +171,7 @@ export function CompareView() {
             const rent = rentForDistrict(p.district)
             const footfall = p.activityScore ?? 0
             const comp = Math.min(10, coworkings)
-            return { id: p.id, location: p.label, district: p.district, footfall, coworkings, competition: comp, avgRent: rent, zone_id: "", decisionScore: decisionScore({ location: p.label, footfall, coworkings, competition: comp, avgRent: rent }) }
+            return { id: p.id, location: p.label, district: p.district, footfall, coworkings, competition: comp, avgRent: rent, zone_id: "", cluster_label: "", ml_score: 0, decisionScore: decisionScore({ location: p.label, footfall, coworkings, competition: comp, avgRent: rent }) }
         })
         .sort((a, b) => b.decisionScore - a.decisionScore)
 
@@ -153,9 +182,10 @@ export function CompareView() {
             const rent = rentForDistrict(p.district)
             const footfall = p.density ?? 0
             const comp = Math.min(10, coworkings)
-            return { id: p.id, location: loc, district: p.district || "—", footfall, coworkings, competition: comp, avgRent: rent, zone_id: "", decisionScore: decisionScore({ location: loc, footfall, coworkings, competition: comp, avgRent: rent }) }
+            const clusterInfo = sessionClusters[p.id] ?? { cluster_label: "", ml_score: 0 }
+            return { id: p.id, location: loc, district: p.district || "—", footfall, coworkings, competition: comp, avgRent: rent, zone_id: "", cluster_label: clusterInfo.cluster_label, ml_score: clusterInfo.ml_score, decisionScore: decisionScore({ location: loc, footfall, coworkings, competition: comp, avgRent: rent }) }
         })
-        .sort((a, b) => b.decisionScore - a.decisionScore)
+        .sort((a, b) => (b.ml_score || b.decisionScore) - (a.ml_score || a.decisionScore))
 
     const data = scope === "saved" ? rankedSaved : scope === "session" ? rankedSession : rankedModel
     const bestNow = data[0]
@@ -271,6 +301,7 @@ export function CompareView() {
                                 <th className="pb-2 pr-3 font-medium">{c.colCoworkings}</th>
                                 <th className="pb-2 pr-3 font-medium">{c.colCompetition}</th>
                                 <th className="pb-2 pr-3 font-medium">{c.colRent}</th>
+                                <th className="pb-2 pr-3 font-medium">ML Cluster</th>
                                 <th className="pb-2 font-medium">{c.colScore}</th>
                             </tr>
                         </thead>
@@ -292,6 +323,11 @@ export function CompareView() {
                                         <td className="py-2 pr-3 tabular-nums">{location.competition}/10</td>
                                         <td className="py-2 pr-3 tabular-nums text-muted-foreground">
                                             {location.avgRent ? location.avgRent.toLocaleString() : "—"}
+                                        </td>
+                                        <td className="py-2 pr-3">
+                                            {location.cluster_label
+                                                ? <Badge variant="outline" className="text-xs whitespace-nowrap">{location.cluster_label}</Badge>
+                                                : <span className="text-muted-foreground">—</span>}
                                         </td>
                                         <td className="py-2 tabular-nums font-semibold">{location.decisionScore.toLocaleString()}</td>
                                     </tr>

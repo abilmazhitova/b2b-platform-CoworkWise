@@ -1,6 +1,19 @@
 from pydantic import BaseModel
 
 
+class ZoneClusterInput(BaseModel):
+    id: int
+    lat: float
+    lon: float
+    density: float = 0.0
+    competition: float = 0.0
+    district: str = ""
+
+
+class ClusterZonesRequest(BaseModel):
+    zones: list[ZoneClusterInput]
+
+
 class CompareItem(BaseModel):
     location: str
     footfall: int
@@ -9,6 +22,8 @@ class CompareItem(BaseModel):
     competition: int = 0
     district: str = ""
     zone_id: str = ""
+    cluster_label: str = ""
+    ml_score: int = 0
 
 
 class RecommendationItem(BaseModel):

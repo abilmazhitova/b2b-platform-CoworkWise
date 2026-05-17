@@ -1,8 +1,12 @@
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, Query
+import logging
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import async_session_maker
 from app.services import ml_analysis_service
+from app.services import ml_client
+
+logger = logging.getLogger(__name__)
 from app.schemas.telecom_schema import (
     TelecomGridCreate, TelecomGridRead, GridWithActivity,
     TelecomStatCreate, TelecomStatRead,
@@ -88,7 +92,6 @@ async def list_grids_with_activity(
         ]
 
 
-# ---------- STATS ----------
 @router.post("/stats", response_model=TelecomStatRead)
 async def add_stat(data: TelecomStatCreate):
     async with async_session_maker() as session:
@@ -105,10 +108,47 @@ async def list_stats(grid_id: int):
 
 
 
+async def _trigger_ml_training() -> None:
+    """Background task: collect zone + monthly data from DB, send to ML service for training."""
+    try:
+        from app.services.telecom_service import get_grids_with_activity, get_activity_by_month
+        async with async_session_maker() as session:
+            rows = await get_grids_with_activity(session)
+            by_month = await get_activity_by_month(session)
+
+        if not rows:
+            logger.warning("ML training skipped: no zone data in DB")
+            return
+
+        zones = [
+            {
+                "id": g.id,
+                "lat": (g.lat_bot_left + g.lat_top_right) / 2,
+                "lon": (g.long_bot_left + g.long_top_right) / 2,
+                "density": float(activity),
+                "infra_score": 0.0,
+                "competition": 0.0,
+                "rent_m2": 9000.0,
+            }
+            for g, activity in rows
+        ]
+        monthly_totals = [
+            {"month": m, "total": float(t)}
+            for m, t in by_month
+            if m
+        ]
+
+        result = await ml_client.train(zones, monthly_totals)
+        logger.info("ML training result: %s", result)
+    except Exception as exc:
+        logger.exception("ML training background task failed: %s", exc)
+
+
 @router.post("/upload")
 async def upload_telecom_file(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    month_label: str = Query(..., description="например '03.2023'")
+    month_label: str = Query(..., description="например '03.2023'"),
 ):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
         tmp.write(await file.read())
@@ -116,4 +156,6 @@ async def upload_telecom_file(
 
     async with async_session_maker() as session:
         result = await import_telecom_data(session, tmp_path, month_label)
-        return result
+
+    background_tasks.add_task(_trigger_ml_training)
+    return result

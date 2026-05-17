@@ -81,7 +81,7 @@ def filter_grids_by_district(rows, district_slug: str | None):
         logger.warning("District polygon not found for slug=%s name=%s", district_slug, target)
         return []
     records = []
-    for g, _activity in rows:
+    for g, _ in rows:
         lat = (g.lat_bot_left + g.lat_top_right) / 2
         lon = (g.long_bot_left + g.long_top_right) / 2
         records.append({"lat": lat, "lon": lon})
@@ -94,7 +94,6 @@ def filter_grids_by_district(rows, district_slug: str | None):
     joined = gpd.sjoin(gdf_pts, sub, how="inner", predicate="within")
     if joined.empty:
         return []
-    # Индекс строк = индекс в исходном rows (sjoin сохраняет левый индекс)
     keep = sorted(set(joined.index.astype(int).tolist()))
     return [rows[i] for i in keep]
 
@@ -238,7 +237,7 @@ def get_recommendations_ml(rows, limit=10):
 
     if gdf_infra is not None and not gdf_infra.empty:
         infra_score, access_score, competition = [], [], []
-        for idx, row in gdf_feat.iterrows():
+        for _, row in gdf_feat.iterrows():
             pt = row.geometry
             nearby = gdf_infra[gdf_infra.distance(pt) <= radius]
             infra_score.append(len(nearby[nearby["type"].isin(infra_types)]))
@@ -252,7 +251,6 @@ def get_recommendations_ml(rows, limit=10):
         gdf_feat["accessibility"] = 0
         gdf_feat["competition"] = 0
 
-    district_name_col = "name"
     if gdf_districts is not None and not gdf_districts.empty:
         gdf_join = gpd.sjoin(gdf_feat, gdf_districts, how="left", predicate="within")
         if "name_left" in gdf_join.columns and "name_right" in gdf_join.columns:

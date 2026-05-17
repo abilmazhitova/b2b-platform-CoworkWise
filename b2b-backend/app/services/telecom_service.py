@@ -69,7 +69,6 @@ async def get_grids_with_activity_in_district(
     time_hour_from: int | None = None,
     time_hour_to: int | None = None,
 ):
-    """Spatial filter via PostGIS ST_Within — returns only grids inside the district polygon."""
     filters = ""
     params: dict = {"geojson": district_geojson}
     if week_day is not None:
@@ -156,7 +155,7 @@ async def import_telecom_data(session: AsyncSession, file_path: str, month_label
             week_day=int(row["WEEK_DAY_IND"]),
             time_hour=time_hour,
             user_count=float(row["NUM_OF_UNIQ_USERS"]),
-            month_label=month_label,   # <— вот здесь сохраняем месяц
+            month_label=month_label,
         )
         session.add(stat)
 

@@ -1,9 +1,0 @@
-pandas
-geopandas
-numpy
-folium
-shapely
-branca
-scikit-learn
-pyproj
-osmnx

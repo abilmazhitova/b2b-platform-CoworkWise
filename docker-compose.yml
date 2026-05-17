@@ -16,6 +16,22 @@ services:
       timeout: 5s
       retries: 10
 
+  ml:
+    build:
+      context: ./b2b-ml
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - ml_models:/app/models_store
+    environment:
+      MODELS_DIR: /app/models_store
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./b2b-backend
@@ -31,8 +47,11 @@ services:
       SECRET_KEY: ${SECRET_KEY:-docker-dev-secret-replace-in-production-min-32-chars}
       ALGORITHM: HS256
       CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+      ML_SERVICE_URL: "http://ml:8001"
     depends_on:
       postgres:
+        condition: service_healthy
+      ml:
         condition: service_healthy
     volumes:
       - ./b2b-backend/data:/app/data
@@ -51,3 +70,4 @@ services:
 
 volumes:
   postgres_data:
+  ml_models:
