@@ -24,7 +24,7 @@ _state: dict = {k: None for k in _PATHS}
 _state["trained"] = False
 
 _CLUSTER_LABELS = ["High Potential", "Good Potential", "Moderate Potential", "Low Potential"]
-_CLUSTER_BASE_SCORES = [90, 72, 55, 30]
+_CLUSTER_SCORE_RANGES = [(80, 100), (60, 79), (40, 59), (20, 39)]
 
 KMEANS_FEATURES = ["density", "infra_score", "competition", "rent_m2"]
 
@@ -113,18 +113,37 @@ def predict_clusters(zones: list[dict]) -> list[dict]:
 
     order = _state["cluster_order"]
     raw_to_rank = {raw: rank for rank, raw in enumerate(order)}
+    densities = df["density"].fillna(0).values.astype(float)
 
-    results = []
-    for zone, raw_label in zip(zones, raw_labels):
+    raw_results = []
+    for i, (zone, raw_label) in enumerate(zip(zones, raw_labels)):
         rank = raw_to_rank.get(int(raw_label), int(raw_label))
         rank = min(rank, len(_CLUSTER_LABELS) - 1)
-        results.append({
-            "id": zone["id"],
-            "cluster": rank,
-            "cluster_label": _CLUSTER_LABELS[rank],
-            "score": _CLUSTER_BASE_SCORES[rank],
-        })
-    return results
+        raw_results.append({"id": zone["id"], "cluster": rank, "density": densities[i]})
+
+    for rank_idx in range(len(_CLUSTER_LABELS)):
+        group = [r for r in raw_results if r["cluster"] == rank_idx]
+        if not group:
+            continue
+        lo, hi = _CLUSTER_SCORE_RANGES[rank_idx]
+        d_vals = [r["density"] for r in group]
+        d_min, d_max = min(d_vals), max(d_vals)
+        d_range = d_max - d_min
+        for r in raw_results:
+            if r["cluster"] != rank_idx:
+                continue
+            pct = (r["density"] - d_min) / d_range if d_range > 0 else 1.0
+            r["score"] = int(lo + pct * (hi - lo))
+
+    return [
+        {
+            "id": r["id"],
+            "cluster": r["cluster"],
+            "cluster_label": _CLUSTER_LABELS[r["cluster"]],
+            "score": r["score"],
+        }
+        for r in raw_results
+    ]
 
 
 def predict_forecast(monthly_totals: list[dict]) -> dict:

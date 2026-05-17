@@ -37,28 +37,27 @@ async def get_compare(
         if not rows:
             return []
 
+        all_zone_features = [
+            {
+                "id": g.id,
+                "lat": (g.lat_bot_left + g.lat_top_right) / 2,
+                "lon": (g.long_bot_left + g.long_top_right) / 2,
+                "density": float(activity),
+                "infra_score": 0.0,
+                "competition": 0.0,
+                "rent_m2": _RENT_AVG,
+            }
+            for g, activity in rows
+        ]
+        cluster_results = await ml_client.predict_clusters(all_zone_features)
+        cluster_map: dict[int, dict] = {c["id"]: c for c in cluster_results}
+
         loop = asyncio.get_event_loop()
         recs = await loop.run_in_executor(
             None, lambda: ml_analysis_service.get_recommendations_ml(rows, limit * 2)
         )
         if not recs:
             return []
-
-        zone_features = []
-        for r in recs:
-            district = str(r.get("district") or "")
-            zone_features.append({
-                "id": int(r["id"]),
-                "lat": float(r["lat"]),
-                "lon": float(r["lng"]),
-                "density": float(r["metrics"].get("footfall") or 0),
-                "infra_score": 0.0,
-                "competition": float(r["metrics"].get("competition") or 0),
-                "rent_m2": float(_RENT_INDEX.get(district, _RENT_AVG)),
-            })
-
-        cluster_results = await ml_client.predict_clusters(zone_features)
-        cluster_map: dict[int, dict] = {c["id"]: c for c in cluster_results}
 
         items = []
         for r in recs:
@@ -98,28 +97,27 @@ async def get_recommendations(
         if not rows:
             return []
 
+        all_zone_features = [
+            {
+                "id": g.id,
+                "lat": (g.lat_bot_left + g.lat_top_right) / 2,
+                "lon": (g.long_bot_left + g.long_top_right) / 2,
+                "density": float(activity),
+                "infra_score": 0.0,
+                "competition": 0.0,
+                "rent_m2": _RENT_AVG,
+            }
+            for g, activity in rows
+        ]
+        cluster_results = await ml_client.predict_clusters(all_zone_features)
+        cluster_map: dict[int, dict] = {c["id"]: c for c in cluster_results}
+
         loop = asyncio.get_event_loop()
         geo_recs = await loop.run_in_executor(
             None, lambda: ml_analysis_service.get_recommendations_ml(rows, limit * 2)
         )
         if not geo_recs:
             return []
-
-        zone_features = []
-        for r in geo_recs:
-            district = str(r.get("district") or "")
-            zone_features.append({
-                "id": int(r["id"]),
-                "lat": float(r["lat"]),
-                "lon": float(r["lng"]),
-                "density": float(r["metrics"].get("footfall") or 0),
-                "infra_score": 0.0,
-                "competition": float(r["metrics"].get("competition") or 0),
-                "rent_m2": float(_RENT_INDEX.get(district, _RENT_AVG)),
-            })
-
-        cluster_results = await ml_client.predict_clusters(zone_features)
-        cluster_map: dict[int, dict] = {c["id"]: c for c in cluster_results}
 
         out = []
         for r in geo_recs:
